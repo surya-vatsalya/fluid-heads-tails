@@ -1,17 +1,35 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import { ContainerSchema, ISharedMap, SharedMap } from "@fluid-experimental/fluid-framework";
+import { FrsClient, FrsConnectionConfig, FrsContainerConfig, InsecureTokenProvider } from "@fluid-experimental/frs-client";
+import { getContainerId } from "./getContainerId.js";
+import { reactRenderView as renderView } from "./view.js";
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+async function start() {
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+    const { id, isNew } = getContainerId();
+
+    const localConfig = {
+        tenantId: "local",
+        tokenProvider: new InsecureTokenProvider("anyValue", { id: "userId" }),
+        orderer: "http://localhost:7070",
+        storage: "http://localhost:7070", 
+    };
+
+    const client = new FrsClient(localConfig);
+
+    const containerConfig = { id };
+    const containerSchema = {
+        name: "hello-world-demo-container",
+        initialObjects: { coin : SharedMap }
+    };
+
+    const { fluidContainer } = isNew
+        ? await client.createContainer(containerConfig, containerSchema)
+        : await client.getContainer(containerConfig, containerSchema);
+
+    renderView(
+        fluidContainer.initialObjects.coin,
+        document.getElementById("content") 
+    );
+}
+
+start().catch((error) => console.error(error));
